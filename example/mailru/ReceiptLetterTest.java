@@ -3,7 +3,6 @@ package by.htp.library.example.mailru;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ForkJoinPool.ManagedBlocker;
-
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -21,6 +20,7 @@ public class ReceiptLetterTest {
 	private WebElement emailFrom;
 	private WebElement address;
 	private WebElement subj;
+	private List<WebElement> elements;
 
 	@BeforeMethod
 	public void initDriver() throws InterruptedException {
@@ -28,92 +28,84 @@ public class ReceiptLetterTest {
 		driver = new ChromeDriver();
 		driverWait = new WebDriverWait(driver, 50);
 	}
-	
-	 @Test
-	 public void testSendLetter() throws InterruptedException {
-	  driver.get("https://mail.ru");
-	  WebElement login = driver.findElement(By.id("mailbox:login"));
-	  login.sendKeys("marusy.net@mail.ru");
-	  WebElement pass = driver.findElement(By.id("mailbox:password"));
-	  pass.sendKeys("vfhecmrf1893335");
 
-	  WebElement loginButton = driver.findElement(By.id("mailbox:submit"));
-	  loginButton.click();
+	@Test
+	public void testSendLetter() throws InterruptedException {
+		driver.get("https://mail.ru");
+		WebElement login = driver.findElement(By.id("mailbox:login"));
+		login.sendKeys("altprint19@mail.ru");
+		WebElement pass = driver.findElement(By.id("mailbox:password"));
+		pass.sendKeys("vfhecmrf");
+		WebElement loginButton = driver.findElement(By.id("mailbox:submit"));
+		loginButton.click();
+		WebElement myDynamicElement = driverWait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//span[text()='Входящие']")));
+		myDynamicElement.click();
 
-	  WebElement myDynamicElement = driverWait
-	    .until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//span[text()='Входящие']")));
-	  myDynamicElement.click();
+		List<WebElement> elements = driverWait.until(ExpectedConditions.visibilityOfAllElementsLocatedBy(By.xpath("//div[@class='b-datalist__item__date']")));
+		for (int i = 0; i <= elements.size(); i++) {
 
-	  List<WebElement> elements = driverWait.until(ExpectedConditions
-	    .visibilityOfAllElementsLocatedBy(By.xpath("//div[@class='b-datalist__item__date']")));
-	  for (int i = 0; i <= elements.size(); i++) {
+			if (i == elements.size()) {
+				nextPage();
+				i = 0;
+			}
 
-	   if (i == elements.size()) {
-	    WebElement nextElement = driverWait
-	      .until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//div[@data-name='next']")));
-	    nextElement.click();
-	    Thread.sleep(1000);
-	    elements = driverWait.until(ExpectedConditions
-	      .visibilityOfAllElementsLocatedBy(By.xpath("//div[@class='b-datalist__item__date']")));
-	    i = 0;
-	    System.out.println(i);
+			if (elements.get(i).isDisplayed()) {
+				driverWait.until(ExpectedConditions.elementToBeClickable(elements.get(i)));
+				elements.get(i).click();
 
-	   }
-	   if (elements.get(i).isDisplayed()) {
-	    System.out.println(i);
-	    driverWait.until(ExpectedConditions.elementToBeClickable(elements.get(i)));
-	    elements.get(i).click();
+				checkElements();
 
-	    address = driverWait.until(ExpectedConditions.visibilityOfElementLocated(
-	      By.xpath("//span[@class='b-contact-informer-target js-contact-informer']")));
-	    address.click();
-	    emailFrom = driverWait.until(ExpectedConditions
-	      .visibilityOfElementLocated(By.xpath("//div[@class='b-contact-informer__email']")));
-	    System.out.println(emailFrom.getText());
-	    subj = driver.findElement(By.xpath("//div[@class='b-letter__head__subj']"));
+				if (emailFrom.getText().equals(SendLetterTest.emailReceiver)
+						&& subj.getText().equals(SendLetterTest.subjectField)) {
 
-	    if (emailFrom.getText().equals(SendLetterTest.emailReceiver)
-	      && subj.getText().equals(SendLetterTest.subjectField)) {
-	     System.out.println(emailFrom.getText());
-	     System.out.println(subj.getText());
+					Assert.assertEquals(emailFrom.getText(), SendLetterTest.emailReceiver);
 
-	     Assert.assertEquals(emailFrom.getText(), SendLetterTest.emailReceiver);
+					reply();
+					break;
 
-	     WebElement reply = driver.findElement(By.xpath("//span[@data-compose-act='reply']"));
-	     reply.click();
+				} else {
+					driver.navigate().back();
+					elements = driverWait.until(ExpectedConditions.visibilityOfAllElementsLocatedBy(By.xpath("//div[@class='b-datalist__item__date']")));
+				}
+			}
+		}
+	}
 
-	     driver.switchTo().frame(driver.findElement(By.xpath("//iframe[@scrolling = 'auto']")));
-	     WebElement textEmail = driver.findElement(By.xpath("//body[@id='tinymce']"));
-	     textEmail.sendKeys("texttext");
-	     driver.switchTo().defaultContent();
+	public void checkElements() {
+		address = driverWait.until(ExpectedConditions.visibilityOfElementLocated(
+				By.xpath("//span[@class='b-contact-informer-target js-contact-informer']")));
+		address.click();
+		emailFrom = driverWait.until(
+				ExpectedConditions.visibilityOfElementLocated(By.xpath("//div[@class='b-contact-informer__email']")));
+		System.out.println(emailFrom.getText());
+		subj = driver.findElement(By.xpath("//div[@class='b-letter__head__subj']"));
+	}
 
-	     WebElement btnSend = driver.findElement(By.xpath("//div[@data-name='send']"));
-	     btnSend.click();
+	public void nextPage() throws InterruptedException {
+		WebElement nextElement = driverWait
+				.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//div[@data-name='next']")));
+		nextElement.click();
+		Thread.sleep(1000);
+		elements = driverWait.until(ExpectedConditions
+				.visibilityOfAllElementsLocatedBy(By.xpath("//div[@class='b-datalist__item__date']")));
+	}
 
-	     break;
+	public void reply() {
+		WebElement reply = driver.findElement(By.xpath("//span[@data-compose-act='reply']"));
+		reply.click();
 
-	    } else {
-	     driver.navigate().back();
+		driver.switchTo().frame(driver.findElement(By.xpath("//iframe[@scrolling = 'auto']")));
+		WebElement textEmail = driver.findElement(By.xpath("//body[@id='tinymce']"));
+		textEmail.sendKeys("texttext");
+		driver.switchTo().defaultContent();
 
-	     /*
-	      * nextElement = driverWait
-	      * .until(ExpectedConditions.visibilityOfElementLocated(By.xpath(
-	      * "//div[@data-name='next']"))); nextElement.click();
-	      */
-	     // driverWait.until(ExpectedConditions.invisibilityOf(driver.findElement(By.xpath("//div[@class='b-tooltip__content']"))));
-	     elements = driverWait.until(ExpectedConditions
-	       .visibilityOfAllElementsLocatedBy(By.xpath("//div[@class='b-datalist__item__date']")));
-	    }
-	   }
-	  }
-	 }
+		WebElement btnSend = driver.findElement(By.xpath("//div[@data-name='send']"));
+		btnSend.click();
+	}
 
-	 @AfterMethod
-	 public void close() {
-	//  driver.quit();
-	  System.out.println("AfterClass");
-	 }
-
-	
+	@AfterMethod
+	public void close() {
+		driver.quit();
+	}
 
 }
